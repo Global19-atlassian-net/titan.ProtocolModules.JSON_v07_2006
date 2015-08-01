@@ -1,0 +1,156 @@
+/******************************************************************************
+* Copyright (c) 2015, 2015  Ericsson AB
+* All rights reserved. This program and the accompanying materials
+* are made available under the terms of the Eclipse Public License v1.0
+* which accompanies this distribution, and is available at
+* http://www.eclipse.org/legal/epl-v10.html
+*
+* Contributors:
+*  Gabor Szalai  - initial implementation and initial documentation
+******************************************************************************/
+//  File:          JSON_Types.ttcn
+//  Description:   JavaScript Object Notation
+//  Deviations:
+//    Numbers: A JSON_Number is an integer, which only allows positive and negative integer number representations.
+//             Fractions and exponencials are just discarded.
+//             This limitation comes from the TEXT decoder: there is no float encoding/decoding in it at all.
+//  References:    RFC 4627 July 2006, json.org
+//  Rev:           R1A
+//  Prodnr:        CNL 113 676/1
+//
+
+module JSON_Types {
+
+external function enc_JSON(in JSON_PDU pdu) return octetstring
+with { extension "prototype(convert) encode(TEXT)" };
+external function dec_JSON(in octetstring msg) return JSON_PDU
+with { extension "prototype(convert) decode(TEXT)" };
+external function dec_JSON_Sliding(inout octetstring msg, out JSON_PDU pdu) return integer
+with { extension "prototype(sliding) decode(TEXT)" };
+
+public function enc_JSON_escaped(in JSON_PDU pdu) return octetstring {
+  var JSON_PDU vl_temp := pdu;
+  f_JSON_handleEscapes(vl_temp, escape);
+  return enc_JSON(vl_temp);
+}
+
+public function dec_JSON_escaped(in octetstring msg) return JSON_PDU {
+  var JSON_PDU vl_temp := dec_JSON(msg);
+  f_JSON_handleEscapes(vl_temp, unescape);
+  return vl_temp;
+}
+
+public function dec_JSON_Sliding_escaped(in octetstring msg, out JSON_PDU pdu) return integer {
+  var integer vl_sliding := dec_JSON_Sliding(msg, pdu);
+  f_JSON_handleEscapes(pdu, unescape);
+  return vl_sliding;
+}
+
+type union JSON_PDU {
+  JSON_Object  json_object,
+  JSON_Array   json_array
+} with {variant "TEXT_CODING()"}
+
+type set of JSON_AVP JSON_Object with {
+  variant "BEGIN('{ ','([\q{0,0,0,32}\q{0,0,0,9}\q{0,0,0,10}\q{0,0,0,13}]#(,))\{',case_insensitive)"
+  variant "SEPARATOR(', ','([\q{0,0,0,32}\q{0,0,0,9}\q{0,0,0,10}\q{0,0,0,13}]#(,)),')"
+  variant "END('} ','([\q{0,0,0,32}\q{0,0,0,9}\q{0,0,0,10}\q{0,0,0,13}]#(,))}([\q{0,0,0,32}\q{0,0,0,9}\q{0,0,0,10}\q{0,0,0,13}]#(,))')"
+}
+
+type record JSON_AVP {
+  JSON_String json_name,
+  JSON_Value  json_value
+} with {
+  variant "SEPARATOR(': ', '([\q{0,0,0,32}\q{0,0,0,9}\q{0,0,0,10}\q{0,0,0,13}]#(,)):')"
+}
+
+type universal charstring JSON_String with {
+  variant "BEGIN('\"','([\q{0,0,0,32}\q{0,0,0,9}\q{0,0,0,10}\q{0,0,0,13}]#(,))\"',case_insensitive)"
+  variant "TEXT_CODING(,,'([^\"]|(\\""))#(,)',)"
+  variant "END('\"')"
+}
+
+type union JSON_Value {
+  JSON_Object      json_object,
+  JSON_Array       json_array,
+  JSON_String      json_string,
+  JSON_Number      json_number,
+  JSON_True_TEXT   json_true,
+  JSON_False_TEXT  json_false,
+  JSON_Null_TEXT   json_null
+} with {
+  variant "BEGIN('','([\q{0,0,0,32}\q{0,0,0,9}\q{0,0,0,10}\q{0,0,0,13}]#(,))')"
+}
+
+type set of JSON_Value JSON_Array with {
+  variant "BEGIN('[ ','([\q{0,0,0,32}\q{0,0,0,9}\q{0,0,0,10}\q{0,0,0,13}]#(,))\[',case_insensitive)"
+  variant "SEPARATOR(', ','([\q{0,0,0,32}\q{0,0,0,9}\q{0,0,0,10}\q{0,0,0,13}]#(,)),')"
+  variant "END('] ','([\q{0,0,0,32}\q{0,0,0,9}\q{0,0,0,10}\q{0,0,0,13}]#(,))\]')"
+}
+
+
+type record JSON_True_TEXT {
+} with {
+  variant "BEGIN('true ','([\q{0,0,0,32}\q{0,0,0,9}\q{0,0,0,10}\q{0,0,0,13}]#(,))true')"
+}
+
+type record JSON_False_TEXT {
+} with {
+  variant "BEGIN('false ','([\q{0,0,0,32}\q{0,0,0,9}\q{0,0,0,10}\q{0,0,0,13}]#(,))false')"
+}
+
+type record JSON_Null_TEXT {
+} with {
+  variant "BEGIN('null ','([\q{0,0,0,32}\q{0,0,0,9}\q{0,0,0,10}\q{0,0,0,13}]#(,))null')"
+}
+
+type integer JSON_Number with {
+  variant "BEGIN('','([\q{0,0,0,32}\q{0,0,0,9}\q{0,0,0,10}\q{0,0,0,13}]#(,))')"
+}
+
+type enumerated JSON_EscapeAction
+{
+  escape(0),
+  unescape(1)
+};
+
+
+private function f_JSON_handleEscapes(inout JSON_PDU pl_json, in JSON_EscapeAction pl_action) {
+  if(ischosen(pl_json.json_object)) {
+    f_JSON_handleEscapes_object(pl_json.json_object, pl_action);
+  } else if(ischosen(pl_json.json_array)) {
+    f_JSON_handleEscapes_array(pl_json.json_array, pl_action);
+  }
+}
+
+private function f_JSON_handleEscapes_object(inout JSON_Object pl_object, in JSON_EscapeAction pl_action) {
+  var integer vl_sizeof_object := sizeof(pl_object);
+  for(var integer i := 0; i < vl_sizeof_object; i := i + 1) {
+    if(ischosen(pl_object[i].json_value.json_array)) {
+      f_JSON_handleEscapes_array(pl_object[i].json_value.json_array, pl_action);
+    } else if(ischosen(pl_object[i].json_value.json_object)) {
+      f_JSON_handleEscapes_object(pl_object[i].json_value.json_object, pl_action);
+    } else  if(ischosen(pl_object[i].json_value.json_string)) {
+      f_JSON_handleEscapes_string(pl_object[i].json_value.json_string, pl_action);
+    }
+  }
+}
+
+private function f_JSON_handleEscapes_array(inout JSON_Array pl_array, in JSON_EscapeAction pl_action) {
+  var integer vl_sizeof_array := sizeof(pl_array);
+  for(var integer i := 0; i < vl_sizeof_array; i := i + 1) {
+    if(ischosen(pl_array[i].json_array)) {
+      f_JSON_handleEscapes_array(pl_array[i].json_array, pl_action);
+    } else if(ischosen(pl_array[i].json_object)) {
+      f_JSON_handleEscapes_object(pl_array[i].json_object, pl_action);
+    } else  if(ischosen(pl_array[i].json_string)) {
+      f_JSON_handleEscapes_string(pl_array[i].json_string, pl_action);
+    }
+  }
+  
+}
+
+external function f_JSON_handleEscapes_string(inout JSON_String pl_string, in JSON_EscapeAction pl_action);
+
+
+} with { encode "TEXT" }
