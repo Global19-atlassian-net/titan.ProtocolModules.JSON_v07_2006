@@ -1,0 +1,70 @@
+= JSON Generic Protocol Modules for TTCN-3 Toolset with TITAN, Description
+:author: Gábor Szalai
+:toc: left
+
+== About This Document
+
+This is the description for the JSON Generic protocol module. The JSON Generic protocol modules are developed for the TTCN-3 Toolset with Titan. 
+
+== Functionality
+
+The JSON Generic protocol module implements the object structures of the JSON <<_4, [4]>> in a formalized way, using the standard specification language TTCN-3. This allows defining of test data (templates) in the TTCN-3 language and correctly encoding/decoding messages when executing test suites using the Titan TTCN-3 test environment.
+The JSON Generic protocol module uses Titan’s JSON encoding <<_3, [3]>> and hence is usable with the Titan test toolset only.
+
+=== System Requirements
+Protocol modules are a set of TTCN-3 source code files that can be used as part of TTCN-3 test suites only. Hence, protocol modules alone do not put specific requirements on the system used. However, in order to compile and execute a TTCN-3 test suite using the set of protocol modules the following system requirements must be satisfied:
+
+* Titan TTCN-3 Test Executor version CRL 113 200/6 R5A (6.5.pl0) or higher installed. For Installation Guide see <<_2, [2]>>. Please note: This version of the test port is not compatible with Titan releases earlier than CRL 113 200/6 R5A.
+
+===	Installation
+The set of protocol modules can be used in developing TTCN-3 test suites using any text editor. Since the JSON Generic protocol is used as a part of a TTCN-3 test suite, this requires TTCN-3 Test Executor be installed before the module can be compiled and executed together with other parts of the test suite. For more details on the installation of TTCN-3 Test Executor see the relevant section of <<_2, [2]>>.
+
+== Interface description
+
+=== Top Level PDU
+
+The top level PDUs are the TTCN-3 union JSON_generic_val.
+
+=== Encoding/decoding and other related functions
+This product also contains encoding/decoding functions, which assure correct encoding of messages when sent from Titan and correct decoding of messages when received by Titan. 
+
+==== Implemented encoding and decoding functions
+
+[source]
+----
+Name	Type of formal parameters	Type of return value
+f_enc_JSON	in JSON_generic_val	octetstring
+f_dec_JSON	in octetstring	out JSON_generic_val integer
+----
+
+== Usage
+
+The JSON_generic_val can represent any kind of JSON object or value. The type JSON_generic_val can be used in any structured JSON protocol module as a placeholde of a generic JSON object.
+
+== Terminology	
+
+=== Abbreviations
+
+JSON:: JavaScript Object Notation
+
+PDU:: Protocol Data Unit
+
+TTCN-3:: Testing and Test Control Notation version 3
+
+== References
+
+[[_1]]
+[1]	ETSI ES 201 873-1 v4.4.1 (2012-04) +
+The Testing and Test Control Notation version 3. Part 1: Core Language
+
+[[_2]]
+[2]	1/ 198 17-CRL 113 200/6 Uen +
+Installation Guide for the TITAN TTCN-3 Test Executor
+
+[[_3]]
+[3]	2/198 17-CRL 113 200/6 Uen +
+Programmer's Technical Reference for Titan TTCN-3 Test Executor
+
+[[_4]]
+[4]	https://www.json.org
+

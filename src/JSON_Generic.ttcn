@@ -1,0 +1,46 @@
+/******************************************************************************
+* Copyright (c) 2004, 2018  Ericsson AB
+* All rights reserved. This program and the accompanying materials
+* are made available under the terms of the Eclipse Public License v1.0
+* which accompanies this distribution, and is available at
+* http://www.eclipse.org/legal/epl-v10.html
+*
+* Contributors:
+*   Gabor Szalai - initial implementation and initial documentation
+******************************************************************************/
+//
+//  File:               JSON_Generic.ttcn
+//  Description:	      Generic type definition for JSON
+//  Rev:                R1A
+//  Prodnr:             CNL 113 899
+/////////////////////////////////////////////// 
+module JSON_Generic{
+  
+  import from JSON_Generic_Null_Def all;
+  
+  external function f_enc_JSON(in JSON_generic_val pdu) return octetstring 
+    with { extension "prototype(convert) encode(JSON)" }
+
+  external function f_dec_JSON(in octetstring stream, out JSON_generic_val pdu) return integer 
+    with { extension "prototype(backtrack) decode(JSON)" }
+
+
+  type union JSON_generic_val{
+    integer                     JSON_integer,
+    float                       JSON_number,
+    boolean                     JSON_bool,
+    universal charstring        JSON_string,
+    set of JSON_generic_val     JSON_array,
+    record of record {
+      universal charstring   key,
+      JSON_generic_val       val
+    }                           JSON_object,
+    JSON_null_type              JSON_null_val
+  } with {
+    variant "JSON: as value"
+    variant (JSON_object) "as map"
+  }
+
+} with {
+  encode "JSON"
+}

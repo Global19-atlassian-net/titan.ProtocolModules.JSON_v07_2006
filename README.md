@@ -1,5 +1,7 @@
 # titan.ProtocolModules.JSON_v07_2006
 
+Note: Functionally equivalent, but not directly compatible with the previous version. 
+
 Main project page:
 
 https://projects.eclipse.org/projects/tools.titan
